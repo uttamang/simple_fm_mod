@@ -60,9 +60,6 @@ for r = 1:1:300  ;
     % calculation after one input buffer is filled
     
     
-    
-    %blalsa
-    
 	% output buffer
     for z = 1:1:32;
             output_ping_buffer(1,z) = A*cos_ta(m);
