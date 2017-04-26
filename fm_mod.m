@@ -61,7 +61,7 @@ for r = 1:1:300  ;
     
     
     
-    
+    %blalsa
     
 	% output buffer
     for z = 1:1:32;
