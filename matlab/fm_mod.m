@@ -1,30 +1,33 @@
-% Hier fehlen noch
-% Anpassung an f0. Aus gangfrequenz stimmt noch nicht.
-% interpolation
 
 clear all;
 close all;
+
 % constants
-f0 = 12*10^3;    % center frequency
-del_f0 =4e3;     % 
+f0 = 12000;      % center frequency
+del_f0 = 4000;   % maximum frequency delta from the center frequency
 f0min=f0-del_f0; % min. modulation frequency =  8kHz
 f0max=f0+del_f0; % max. modulation frequency = 16kHz
-fa = 48*10^3;    % sampling frequency
+fa = 48000;      % sampling frequency
 f_tab = 10;      % cos lut step size
 A = 32000;       % amplitude
 k= f0/32000;     % frequency deviation
 Ta = 1/fa;       % sampling time
-fx = 50;         % input signal frequency
+fx = 1920;         % input signal frequency
 Tx = 1/fx;       % input signal period
 p=(2*pi/4800);   % cos lut steps
-n=1;
-outp=16;         % Ausgangsinformation in einer Abtastzeit
+n=1;             % pls elaborate :D
+outp=16;         % waht?
 total_y_point=n*outp; % Ausgangspunkte in einer Abtastzeit
-t_total = Tx/Ta; %  Zeit f�r eine Eingangssignalperiode
-% Matrizen erstellen
+
+n_samples_per_period = Tx/Ta %  samples per signal period
+
+if n_samples_per_period <= 2;
+    msg = 'Danger, sampling theorem violated'
+end;
+% matrix creation
 cos_ta =  zeros (4800,1);            % fill cos lut table with zeroes
-x = zeros (2,t_total);               % fill input signal matrix with zeroes
-y = zeros (4,t_total*total_y_point); % fill output signal matrix with zeroes
+x = zeros (2,n_samples_per_period);               % fill input signal matrix with zeroes
+y = zeros (4,n_samples_per_period*total_y_point); % fill output signal matrix with zeroes
 
 %input_ping_buffer = zeros (32,1);
 %input_pong_buffer = zeros (32,1);    
@@ -40,19 +43,20 @@ end;
 
 % create input signal
 
-for ee = 1:1:t_total;  
-    x(1,ee) = A*sin(2*pi*ee/t_total);       % 
+for ee = 1:1:n_samples_per_period;  
+    x(1,ee) = A*sin(2*pi*ee/n_samples_per_period);       % 
     % x(1,ee)=round(ee/480);
 end;
 
 
 del_ph_max=2*pi*Ta*(n*f0+k*max(x(1,:)));    % max-phase offset
 del_ph_min=2*pi*Ta*(n*f0+k*min(x(1,:)));    % min-phase offset
-for nn=1:1:t_total; % run through all sampling times
+for nn=1:1:n_samples_per_period; % run through one signal period
+    
     del_ph=2*pi*Ta*(n*f0+k*x(1,nn));     % calculate phase offset
     ph_inc=(del_ph-(del_ph_min))/(del_ph_max-del_ph_min)*4800/outp*4+4800/outp; % calculate phase increment
     ph_inc_ganz=round(ph_inc);           % round phase increment, replace with linear interpolation
-    %ph_inc_ganz_v(nn,1)=ph_inc_ganz;    % save phase increment
+    
     for ii=1:1:total_y_point;
         tt=(nn-1)*total_y_point+ii;     % pointer
         pp=ph_inc_ganz*tt;              % pointer phase increment
@@ -64,17 +68,18 @@ for nn=1:1:t_total; % run through all sampling times
 end;
 
 
-% phlots
+% plots
 ly=1:1:length(y);
 yx=ly/outp;
 f0_min=n*f0+k*min(x(1,:));
 f0_max=n*f0+k*max(x(1,:));
+
 subplot(2,1,1);
-plot(x(1,1:t_total))
+plot(x(1,1:n_samples_per_period))
 title('input signal x(n)');
 xlabel('sample point n or z(in) in s/Ta');
 legend(['max : ' num2str(max(x(1,:))),'  min : ' num2str(min(x(1,:)))]);
-xlim([0 t_total]);
+xlim([0 n_samples_per_period]);
 subplot(2,1,2);
 plot(y(1,:))
 title('output signal y(n)');
@@ -87,24 +92,28 @@ plot(y(1,:))
 title('output signal y(n)');
 xlabel('sample n oder Z(in) in s/Ta');
 xlim([0 length(y)/4]);
+grid;
 
 subplot(4,1,2);
 plot(y(1,:))
 title('output signal y(n)');
 xlabel('sample n oder Z(in) in s/Ta');
 xlim([length(y)/4 length(y)/2]);
+grid;
 
 subplot(4,1,3);
 plot(y(1,:))
 title('output signal y(n)');
 xlabel('sample n oder Z(in) in s/Ta');
 xlim([length(y)/2 length(y)*3/4]);
+grid;
 
 subplot(4,1,4);
 plot(y(1,:))
 title('output signal y(n)');
 xlabel('sample n oder Z(in) in s/Ta');
 xlim([length(y)*3/4 length(y)]);
+grid;
 
 figure
 subplot(2,1,1);
@@ -143,7 +152,7 @@ for r = 1:1:300  ;
             input_pong_buffer(kk,1) = x(1,kk*r);
         end;
     end;
-    
+end;    
     % calculation through one buffer
     
 figure(1);    

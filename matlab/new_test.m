@@ -15,12 +15,14 @@ t = 4; % signal sample length in sigure;
 time_array = (0:signal_time_step:t-signal_time_step);
 
 lut_table_size = 4800; % length for the cosine lookup table
-buffer_length = 32; % length of ping and pong buffers
+buffer_length = 560; % length of ping and pong buffers
 
-k = 5; % frequency deviation
+k = 12000; % frequency deviation
+
 
 %% generate signal
 signal = A*cos(2*pi*f_sig*time_array-pi/2);
+% signal = A*cos(2*pi.*rand()*500*time_array-pi/2);
 
 %% generate lut
 cos_lut = cos(2*pi*(1:1:lut_table_size)/lut_table_size);
@@ -44,28 +46,33 @@ end;
 %% read input signal to buffer
 
 inputbuffer = [1:1:buffer_length;1:1:buffer_length];
-outputbuffer = [1:1:buffer_length;1:1:buffer_length];
-
-n = 1;
-for r = 1:1:20;
+outputbuffer = [1:1:buffer_length*n_samples;1:1:buffer_length*n_samples];
+buffer = 1;
+% for r = 1:1:20;
     
-    for i = 1:1:buffer_length;
-        inputbuffer(n,i) = signal(r*32+i);
-    end;
+%     for i = 1:1:buffer_length;
+%         inputbuffer(buffer,i) = signal(r*buffer_length+i);
+%     end;
     
-    n = not(n-1)+1; % change buffer from ping to pong or the other way
+%     buffer = not(buffer-1)+1; % change buffer from ping to pong or the other way
     
     for i = 1:1:buffer_length;
         % do sth
-        nT = r*32+i % sample time
-        outputbuffer(n,i) = cos(2*pi*k*nT*sum(signal(1:1:nT)))
+        for j = 1:1:n_samples;
+            n = r*buffer_length+i; % sample time 
+            del_phi = 2*pi*k*(1/fs)*signal(n+1);
+            phi_corr = del_phi*j;
+            phi_corr = round(phi_corr);
+            phi_corr = mod(phi_corr, 4800);
+            outputbuffer(buffer,i) = phi_corr;   
+        end;
     end;
-end;
+% end;
 
 figure;
 subplot(2,1,1)
-plot(0:1:31,inputbuffer(1,1:1:32));
+plot(0:1:buffer_length-1,inputbuffer(1,1:1:buffer_length));
 title('last input ping buffer contents')
 subplot(2,1,2)
-plot(0:1:31,outputbuffer(2,1:1:32));
+plot(outputbuffer(1,:));
 title('last input pong buffer contents')
