@@ -9,7 +9,7 @@ fs = 48000; % sampling frequency
 fc = 12000; % center frequency
 
 Ts = 1/fs;
-f_sig = 600; % signal frequency in Hz
+f_sig = 680; % signal frequency in Hz
 
 A = 1; % signal amplitude
 signal_time_step = Ts;
@@ -18,10 +18,11 @@ time_array = (0:signal_time_step:t-signal_time_step);
 
 lut_table_size = 4800; % length for the cosine lookup table
 buffer_length = 64; % length of ping and pong buffers
-nk=4; 
+nk=3;  % 8 waere besser
 k = fc/nk; % frequency deviation 
-f_out_max = fc+fc*k/fs;
-f_out_min = fc-fc*k/fs;
+f_out_max = fc+k;
+f_out_min = fc-k;
+lut_fak=300/(1-1/nk);
 
 %% generate signal
 signal = A*cos(2*pi*f_sig*time_array-pi/2);
@@ -60,7 +61,8 @@ pointer_old=0;
          for j = 1:1:n_samples;
             kk =  (i-1)*n_samples+j;
             del_phi = 2*pi*(1/fs)*fc+2*pi*(1/fs)*k*inputbuffer(buffer,i);
-            pointer_new=del_phi/(2*pi)*4*342.8541; % min(phi_increment) = 150 and n_sample = 16 =>  150*32= 4800 = lenght of cos_lut
+            pointer_new=del_phi/(2*pi)*4*lut_fak;
+            pointer_min = lut_fak*(1-1/nk);
             pointer_corr = pointer_new+pointer_old;
             pointer_corr = round(pointer_corr);
             pointer_corr = mod(pointer_corr, lut_table_size);
