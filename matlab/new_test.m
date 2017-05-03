@@ -1,24 +1,27 @@
 %% constants
+close all 
+clear all
 pi = 3.1415926;
-debug = 0; % debug mode, show several plotted matrices
+debug = 1; % debug mode, show several plotted matrices
 
 %% frequencies
 fs = 48000; % sampling frequency
 fc = 12000; % center frequency
 
 Ts = 1/fs;
-f_sig = 4000; % signal frequency in Hz
+f_sig = 600; % signal frequency in Hz
 
 A = 1; % signal amplitude
 signal_time_step = Ts;
-t = 4; % signal sample length in sigure;
+t = 0.1; % signal sample length in sigure;
 time_array = (0:signal_time_step:t-signal_time_step);
 
 lut_table_size = 4800; % length for the cosine lookup table
-buffer_length = 560; % length of ping and pong buffers
-
-k = 12000; % frequency deviation
-
+buffer_length = 64; % length of ping and pong buffers
+nk=4; 
+k = fc/nk; % frequency deviation 
+f_out_max = fc+fc*k/fs;
+f_out_min = fc-fc*k/fs;
 
 %% generate signal
 signal = A*cos(2*pi*f_sig*time_array-pi/2);
@@ -34,7 +37,8 @@ title('Cosine lookup table');
 end;
 
 %% samples in one buffer
-n_samples = 1/(Ts*f_sig);
+n_samples = 16;
+% f_output =?
 signal_periods_in_buffer = buffer_length/n_samples;
 
 if debug == 1;
@@ -42,37 +46,48 @@ figure;
 plot(time_array, signal);
 title('Plotted input signal');
 end;
-
 %% read input signal to buffer
 
-inputbuffer = [1:1:buffer_length;1:1:buffer_length];
-outputbuffer = [1:1:buffer_length*n_samples;1:1:buffer_length*n_samples];
+inputbuffer = zeros (2,buffer_length);
+outputbuffer = zeros (2,buffer_length*n_samples);
 buffer = 1;
-% for r = 1:1:20;
+pointer_old=0;
+ for r = 1:1:20;
     
-%     for i = 1:1:buffer_length;
-%         inputbuffer(buffer,i) = signal(r*buffer_length+i);
-%     end;
-    
-%     buffer = not(buffer-1)+1; % change buffer from ping to pong or the other way
-    
-    for i = 1:1:buffer_length;
-        % do sth
-        for j = 1:1:n_samples;
-            n = r*buffer_length+i; % sample time 
-            del_phi = 2*pi*k*(1/fs)*signal(n+1);
-            phi_corr = del_phi*j;
-            phi_corr = round(phi_corr);
-            phi_corr = mod(phi_corr, 4800);
-            outputbuffer(buffer,i) = phi_corr;   
+     for i = 1:1:buffer_length;
+         n = (r-1)*buffer_length+i; % sample time 
+         inputbuffer(buffer,i) = signal(n);  % ping -> pong
+         for j = 1:1:n_samples;
+            kk =  (i-1)*n_samples+j;
+            del_phi = 2*pi*(1/fs)*fc+2*pi*(1/fs)*k*inputbuffer(buffer,i);
+            pointer_new=del_phi/(2*pi)*4*342.8541; % min(phi_increment) = 150 and n_sample = 16 =>  150*32= 4800 = lenght of cos_lut
+            pointer_corr = pointer_new+pointer_old;
+            pointer_corr = round(pointer_corr);
+            pointer_corr = mod(pointer_corr, lut_table_size);
+            pointer_old=pointer_corr;
+            outputbuffer(buffer,kk) = cos_lut(pointer_corr+1);
         end;
-    end;
-% end;
+     end;
+    
+     buffer = not(buffer-1)+1; % change buffer from ping to pong or the other way
+   
+ end;
 
 figure;
-subplot(2,1,1)
-plot(0:1:buffer_length-1,inputbuffer(1,1:1:buffer_length));
-title('last input ping buffer contents')
-subplot(2,1,2)
+subplot(3,1,1)
+plot(0:1:buffer_length-1,inputbuffer(1,:));
+hold on 
+plot(0:1:buffer_length-1,inputbuffer(2,:));
+xlim([0 buffer_length-1]);
+legend('ping-in','pong-in');
+title('last input buffer contents')
+subplot(3,1,2)
 plot(outputbuffer(1,:));
-title('last input pong buffer contents')
+xlim([0 length(outputbuffer(1,:))]);
+legend('ping-out');
+title(['last output buffer contents f-out = [' ,num2str(f_out_min) ':' num2str(f_out_max) ']Hz'])
+subplot(3,1,3)
+plot(outputbuffer(2,:),'r');
+xlim([0 length(outputbuffer(2,:))]);
+legend('pong-out');
+title(['last output buffer contents f-out = [' ,num2str(f_out_min) ':' num2str(f_out_max) ']Hz'])
